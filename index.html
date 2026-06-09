@@ -400,7 +400,7 @@ h1,h2 { font-family:var(--font-display); color:var(--text-strong); margin:0; lin
         const dot = generic ? "" :
           `<span class="pill__dot" style="background:var(--res-${DS[HARBOR_RES[hb.type]]}-top)"></span>`;
         html += `
-          <div class="port" style="left:${px.toFixed(1)}px;top:${py.toFixed(1)}px;font-size:${Math.max(9, HW*0.1).toFixed(1)}px">
+          <div class="port" style="left:${px.toFixed(1)}px;top:${py.toFixed(1)}px;font-size:${(HW*0.24).toFixed(1)}px">
             <span class="port__dock" style="width:${(HW*0.5).toFixed(0)}px;transform:translate(-50%,-50%) rotate(${Math.atan2(-dy,-dx)}rad)"></span>
             <span class="pill">${ratio}${dot}</span>
           </div>`;
