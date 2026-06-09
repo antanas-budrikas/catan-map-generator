@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#F8EFDC" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<title>Catan Map Generator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Hanken+Grotesque:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+/* ============================================================
+   HEXAN design tokens (colors · type · effects · spacing)
+   ============================================================ */
+:root {
+  --parchment-50:#FCF7EC; --parchment-100:#F8EFDC; --parchment-200:#F0E2C6;
+  --parchment-300:#E5D2AC; --sand-500:#BFA06B; --bark-600:#8E7350;
+  --bark-700:#6B5640; --ink-800:#443628; --ink-900:#2E241A; --ink-950:#1C150E;
+  --ocean-100:#D6ECF2; --ocean-300:#79BBD2; --ocean-500:#2C8FB4; --ocean-600:#1F7497; --ocean-700:#185E7B;
+  --harvest-300:#F2C879; --harvest-500:#E0922E; --harvest-600:#C2761C;
+
+  --res-forest-top:#4E8A45; --res-forest-base:#356231; --res-forest-deep:#244C24; --res-forest-ink:#1B3A1B;
+  --res-pasture-top:#9AC65C; --res-pasture-base:#79A642; --res-pasture-deep:#5C8531; --res-pasture-ink:#43621F;
+  --res-fields-top:#EFC34E; --res-fields-base:#D89F2A; --res-fields-deep:#B17F1C; --res-fields-ink:#7C570F;
+  --res-hills-top:#C9663B; --res-hills-base:#A94C27; --res-hills-deep:#863A1C; --res-hills-ink:#5E2812;
+  --res-mountain-top:#8C97A4; --res-mountain-base:#6B7682; --res-mountain-deep:#4F5965; --res-mountain-ink:#353D47;
+  --res-desert-top:#E7CF95; --res-desert-base:#CDAF6B; --res-desert-deep:#AE9050; --res-desert-ink:#7E6232;
+  --res-ocean-top:#3E9DBF; --res-ocean-base:#2A82A4; --res-ocean-deep:#1E6A88; --res-ocean-ink:#0F4458;
+
+  --token-red:#C24B36; --token-ink:#2E241A; --token-face:#F3E7CC;
+
+  --bg-app:var(--parchment-100); --surface:var(--parchment-50); --surface-raised:#FFFFFF;
+  --surface-board:#EAF4F6;
+  --text-strong:var(--ink-900); --text-body:var(--ink-800); --text-muted:var(--bark-600);
+  --text-faint:var(--sand-500); --text-on-brand:#FFF;
+  --border-soft:color-mix(in oklab, var(--bark-600) 22%, transparent);
+  --hairline:color-mix(in oklab, var(--bark-600) 14%, transparent);
+  --brand:var(--ocean-500); --brand-hover:var(--ocean-600); --brand-press:var(--ocean-700);
+  --accent:var(--harvest-500);
+
+  --font-display:"Fredoka","Trebuchet MS",system-ui,sans-serif;
+  --font-body:"Hanken Grotesque",system-ui,-apple-system,sans-serif;
+  --font-numeral:"Fredoka",system-ui,sans-serif;
+
+  --text-2xs:.6875rem; --text-xs:.75rem; --text-sm:.875rem; --text-md:1rem;
+  --text-lg:1.125rem; --text-xl:1.375rem; --text-2xl:1.75rem;
+  --tracking-caps:.12em;
+
+  --radius-sm:.625rem; --radius-md:.875rem; --radius-lg:1.25rem; --radius-xl:1.75rem; --radius-pill:999px;
+  --shadow-color:30 35% 22%;
+  --shadow-sm:0 2px 6px hsl(var(--shadow-color)/.16);
+  --shadow-md:0 6px 16px -4px hsl(var(--shadow-color)/.22);
+  --shadow-lg:0 16px 36px -10px hsl(var(--shadow-color)/.28);
+  --lip-light:inset 0 1px 0 hsl(45 60% 100%/.45);
+  --ease-out:cubic-bezier(.16,1,.3,1); --ease-spring:cubic-bezier(.34,1.56,.64,1);
+  --dur-fast:120ms; --dur-shuffle:520ms;
+
+  --space-2:8px; --space-3:12px; --space-4:16px; --gutter:16px;
+}
+
+* { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+html,body { height:100%; }
+body {
+  margin:0; background:#d9e3ea; color:var(--text-body);
+  font-family:var(--font-body); font-size:var(--text-md); line-height:1.5;
+  -webkit-font-smoothing:antialiased; overflow:hidden;
+  display:flex; justify-content:center;
+}
+h1,h2 { font-family:var(--font-display); color:var(--text-strong); margin:0; line-height:1.08; letter-spacing:-.02em; }
+
+/* phone-native app frame ---------------------------------------- */
+.app {
+  width:100%; max-width:480px; height:100dvh;
+  display:flex; flex-direction:column; background:var(--surface-board);
+  box-shadow:0 0 60px rgba(0,0,0,.25); position:relative; overflow:hidden;
+}
+
+.appbar {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:max(env(safe-area-inset-top),10px) var(--gutter) 10px;
+  background:var(--surface); border-bottom:1px solid var(--hairline);
+  z-index:10; flex:0 0 auto;
+}
+.brand { display:inline-flex; align-items:center; gap:9px; font-family:var(--font-display); font-weight:700; font-size:var(--text-xl); color:var(--text-strong); }
+.brand svg { width:30px; height:30px; display:block; }
+.appbar__actions { display:flex; align-items:center; gap:10px; }
+.badge {
+  font-family:var(--font-body); font-weight:700; font-size:var(--text-xs);
+  padding:5px 11px; border-radius:var(--radius-pill);
+  background:color-mix(in oklab,var(--accent) 18%,transparent);
+  color:var(--harvest-600); white-space:nowrap;
+}
+.iconbtn {
+  width:42px; height:42px; flex:0 0 auto; display:grid; place-items:center;
+  border:1px solid var(--border-soft); border-radius:var(--radius-pill);
+  background:var(--surface-raised); box-shadow:var(--shadow-sm); cursor:pointer; color:var(--text-body);
+}
+.iconbtn:active { transform:scale(.94); }
+.iconbtn svg { width:20px; height:20px; }
+
+/* board stage --------------------------------------------------- */
+.stage {
+  flex:1 1 auto; min-height:0; overflow:hidden; position:relative;
+  display:grid; place-items:center;
+  background:
+    radial-gradient(130% 110% at 50% 8%, var(--res-ocean-top), transparent 62%),
+    linear-gradient(165deg, var(--res-ocean-base), var(--res-ocean-deep));
+}
+.stage[data-sea="0"] { background:linear-gradient(165deg,#cfe3ea,#aecdd9); }
+.boardwrap { position:absolute; top:0; left:0; transform-origin:top left; will-change:transform; }
+.boardinner { position:absolute; inset:0; animation:board-in var(--dur-shuffle) var(--ease-spring); transform-origin:center; }
+@keyframes board-in { from{opacity:0; transform:scale(.92) rotate(-2deg);} to{opacity:1; transform:none;} }
+
+/* hex tile (flat-top, extruded) --------------------------------- */
+.hex { position:absolute; filter:drop-shadow(0 3px 3px hsl(var(--shadow-color)/.28)); }
+.hex__edge,.hex__face {
+  position:absolute; inset:0;
+  clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);
+}
+.hex__edge { transform:translateY(7%); filter:brightness(.8); }
+.hex__face { overflow:hidden; }
+.hex__art { position:absolute; inset:0; width:100%; height:100%; }
+.hex__sheen {
+  position:absolute; inset:0; pointer-events:none;
+  background:
+    radial-gradient(120% 90% at 28% 12%, hsl(45 80% 100%/.34), transparent 55%),
+    linear-gradient(180deg, transparent 55%, hsl(var(--shadow-color)/.28) 100%);
+}
+.hex__rim {
+  position:absolute; inset:0; pointer-events:none;
+  clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);
+  box-shadow:inset 0 0 0 2px hsl(45 50% 100%/.22), inset 0 0 0 3.5px hsl(var(--shadow-color)/.18);
+}
+.res-forest  .hex__edge{background:var(--res-forest-deep);}  .res-forest  .hex__face{background:var(--res-forest-base);}
+.res-pasture .hex__edge{background:var(--res-pasture-deep);} .res-pasture .hex__face{background:var(--res-pasture-base);}
+.res-fields  .hex__edge{background:var(--res-fields-deep);}  .res-fields  .hex__face{background:var(--res-fields-base);}
+.res-hills   .hex__edge{background:var(--res-hills-deep);}   .res-hills   .hex__face{background:var(--res-hills-base);}
+.res-mountain.hex .hex__edge{background:var(--res-mountain-deep);} .res-mountain .hex__face{background:var(--res-mountain-base);}
+.res-desert  .hex__edge{background:var(--res-desert-deep);}  .res-desert  .hex__face{background:var(--res-desert-base);}
+.res-ocean   .hex__edge{background:var(--res-ocean-deep);}   .res-ocean   .hex__face{background:var(--res-ocean-base);}
+
+/* number token -------------------------------------------------- */
+.token {
+  position:absolute; z-index:3; display:inline-grid; place-items:center; border-radius:50%;
+  background:radial-gradient(120% 120% at 32% 26%, #FFFBEF 0%, var(--token-face) 52%, #E6D2A8 100%);
+  box-shadow:0 2px 4px hsl(var(--shadow-color)/.34), inset 0 2px 1px hsl(45 70% 100%/.7), inset 0 -3px 4px hsl(30 40% 50%/.35);
+  border:1.5px solid color-mix(in oklab,var(--bark-700) 28%,transparent);
+  filter:drop-shadow(0 2px 3px hsl(var(--shadow-color)/.4));
+}
+.token__num { font-family:var(--font-numeral); line-height:.9; letter-spacing:-.02em; }
+.token__pips { display:flex; align-items:center; justify-content:center; }
+.token__pips i { border-radius:50%; display:block; }
+
+.robber {
+  position:absolute; z-index:4; left:50%; bottom:14%; transform:translateX(-50%);
+  filter:drop-shadow(0 2px 2px hsl(var(--shadow-color)/.5));
+}
+
+/* port pills on the coast --------------------------------------- */
+.port { position:absolute; transform:translate(-50%,-50%); z-index:5; }
+.port__dock { position:absolute; left:50%; top:50%; height:0; border-top:2px dashed hsl(40 45% 96%/.75); transform-origin:center; }
+.pill {
+  position:relative; display:inline-flex; align-items:center; gap:4px;
+  padding:3px 7px; border-radius:var(--radius-pill);
+  background:var(--surface-raised); box-shadow:var(--shadow-sm); border:1.5px solid var(--border-soft);
+  font-family:var(--font-numeral); font-weight:700; color:var(--text-strong); white-space:nowrap; line-height:1;
+}
+.pill__dot { width:.8em; height:.8em; border-radius:50%; box-shadow:inset 0 -1px 1px rgba(0,0,0,.25); }
+
+/* legend -------------------------------------------------------- */
+.legend {
+  display:flex; flex-wrap:wrap; gap:6px 14px; justify-content:center;
+  padding:var(--space-3) var(--gutter); background:var(--surface);
+  border-top:1px solid var(--hairline); font-size:var(--text-sm); color:var(--text-body); flex:0 0 auto;
+}
+.legend__item { display:inline-flex; align-items:center; gap:6px; }
+.legend__item b { font-weight:800; }
+.legend__sw { width:13px; height:13px; border-radius:4px; box-shadow:inset 0 -2px 2px rgba(0,0,0,.2); }
+
+/* footer bar ---------------------------------------------------- */
+.footer {
+  display:flex; align-items:center; gap:var(--space-3);
+  padding:var(--space-3) var(--gutter) max(env(safe-area-inset-bottom),var(--space-3));
+  background:var(--surface); border-top:1px solid var(--hairline); flex:0 0 auto;
+}
+.btn {
+  font-family:var(--font-display); font-weight:600; font-size:var(--text-md);
+  display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  border-radius:var(--radius-lg); cursor:pointer; border:none; padding:13px 16px;
+  transition:transform var(--dur-fast) var(--ease-out), filter var(--dur-fast);
+}
+.btn svg { width:19px; height:19px; }
+.btn:active { transform:translateY(1px) scale(.99); }
+.btn--ghost { background:transparent; color:var(--text-body); }
+.btn--ghost:active { background:color-mix(in oklab,var(--text-strong) 6%,transparent); }
+.btn--primary {
+  flex:1; background:linear-gradient(180deg, var(--ocean-500), var(--ocean-600));
+  color:var(--text-on-brand); box-shadow:var(--shadow-md), var(--lip-light); font-size:var(--text-lg); padding:14px 16px;
+}
+.btn--primary:hover { filter:brightness(1.05); }
+.seed { font-family:var(--font-numeral); font-weight:700; font-size:var(--text-sm); color:var(--text-faint); min-width:54px; text-align:right; }
+
+/* options sheet ------------------------------------------------- */
+.scrim { position:absolute; inset:0; background:hsl(var(--shadow-color)/.52); opacity:0; pointer-events:none; transition:opacity var(--dur-fast); z-index:40; }
+.scrim.open { opacity:1; pointer-events:auto; }
+.sheet {
+  position:absolute; left:0; right:0; bottom:0; z-index:50;
+  background:var(--surface); border-radius:var(--radius-xl) var(--radius-xl) 0 0;
+  padding:var(--space-4) var(--gutter) max(env(safe-area-inset-bottom),var(--space-4));
+  transform:translateY(100%); transition:transform 260ms var(--ease-out); box-shadow:var(--shadow-lg);
+}
+.sheet.open { transform:translateY(0); }
+.sheet__grip { width:38px; height:4px; border-radius:999px; background:var(--border-soft); margin:0 auto var(--space-3); }
+.sheet h2 { font-size:var(--text-xl); margin-bottom:var(--space-4); }
+.eyebrow { font-weight:700; font-size:var(--text-xs); letter-spacing:var(--tracking-caps); text-transform:uppercase; color:var(--text-muted); margin-bottom:var(--space-2); }
+.optrow { display:flex; align-items:center; justify-content:space-between; gap:var(--space-4); padding:var(--space-3) 0; border-top:1px solid var(--hairline); }
+.optrow b { font-family:var(--font-display); font-weight:600; color:var(--text-strong); display:block; }
+.optrow small { color:var(--text-muted); font-size:var(--text-sm); }
+.switch { width:50px; height:30px; border-radius:999px; border:none; background:var(--border-soft); position:relative; cursor:pointer; flex:0 0 auto; transition:background var(--dur-fast); }
+.switch.on { background:var(--brand); }
+.switch i { position:absolute; top:3px; left:3px; width:24px; height:24px; border-radius:50%; background:#fff; box-shadow:var(--shadow-sm); transition:left var(--dur-fast) var(--ease-out); }
+.switch.on i { left:23px; }
+.switch:active i { width:28px; }
+
+/* segmented control (board mode) */
+.seg { display:flex; gap:3px; padding:3px; background:var(--parchment-200); border-radius:var(--radius-pill); margin-bottom:var(--space-2); }
+.seg button {
+  flex:1; border:none; background:transparent; cursor:pointer; padding:9px 8px;
+  border-radius:var(--radius-pill); font-family:var(--font-display); font-weight:600; font-size:var(--text-sm);
+  color:var(--text-muted); transition:background var(--dur-fast), color var(--dur-fast); line-height:1.1;
+}
+.seg button small { display:block; font-family:var(--font-body); font-weight:500; font-size:var(--text-2xs); color:var(--text-faint); }
+.seg button.active { background:var(--surface-raised); color:var(--text-strong); box-shadow:var(--shadow-sm); }
+.seg button.active small { color:var(--text-muted); }
+
+.optshare { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; margin-top:var(--space-4); padding:var(--space-3); border:1.5px dashed var(--border-soft); border-radius:var(--radius-lg); background:transparent; cursor:pointer; font-family:var(--font-body); font-weight:600; color:var(--text-body); }
+.optshare svg { width:18px; height:18px; color:var(--brand); }
+.sheet__cta { margin-top:var(--space-4); }
+</style>
+</head>
+<body>
+  <div class="app">
+    <header class="appbar">
+      <span class="brand">
+        <svg viewBox="0 0 32 32" aria-hidden="true">
+          <polygon points="16,2 27,8.5 27,21.5 16,28 5,21.5 5,8.5" fill="none"/>
+          <polygon points="16,3 23,7 23,15 16,19 9,15 9,7" fill="#4E8A45"/>
+          <polygon points="16,13 23,17 23,25 16,29 9,25 9,17" fill="#E0922E"/>
+          <polygon points="23,8 30,12 30,20 23,24 16,20 16,12" fill="#2C8FB4"/>
+        </svg>
+        Catan Map
+      </span>
+      <div class="appbar__actions">
+        <span class="badge" id="badge">5–6 players</span><!-- set from board mode -->
+
+        <button class="iconbtn" id="opts" aria-label="Map options">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="9" cy="6" r="2.4" fill="var(--surface-raised)"/><circle cx="15" cy="12" r="2.4" fill="var(--surface-raised)"/><circle cx="8" cy="18" r="2.4" fill="var(--surface-raised)"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <div class="stage" id="stage" data-sea="1">
+      <div class="boardwrap" id="boardwrap"></div>
+    </div>
+
+    <div class="legend" id="legend"></div>
+
+    <footer class="footer">
+      <button class="btn btn--primary" id="reroll">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6"/><path d="M4 4l5 5"/></svg>Re-roll
+      </button>
+      <span class="seed" id="seed">#—</span>
+    </footer>
+
+    <div class="scrim" id="scrim"></div>
+    <div class="sheet" id="sheet">
+      <div class="sheet__grip"></div>
+      <h2>Map options</h2>
+      <div class="eyebrow">Board</div>
+      <div class="seg" id="seg" role="tablist">
+        <button data-mode="base" role="tab"><span>Base game</span><small>19 hexes · 3–4 players</small></button>
+        <button data-mode="extension" role="tab"><span>5–6 Extension</span><small>30 hexes · up to 6</small></button>
+      </div>
+      <label class="optrow">
+        <span><b>Ocean frame</b><small>Sea surround + coastal ports</small></span>
+        <button class="switch on" id="oceanSwitch" role="switch" aria-checked="true"><i></i></button>
+      </label>
+      <label class="optrow" id="mixRow">
+        <span><b>Mix ports</b><small>Shuffle port types vs. fixed layout</small></span>
+        <button class="switch on" id="mixSwitch" role="switch" aria-checked="true"><i></i></button>
+      </label>
+      <button class="optshare" id="share">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg>
+        <span id="shareLabel">Copy link to this board</span>
+      </button>
+      <button class="btn btn--primary sheet__cta" id="sheetGen" style="width:100%">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8" cy="8" r="1.4" fill="currentColor"/><circle cx="16" cy="16" r="1.4" fill="currentColor"/><circle cx="16" cy="8" r="1.4" fill="currentColor"/><circle cx="8" cy="16" r="1.4" fill="currentColor"/></svg>
+        Generate new map
+      </button>
+    </div>
+  </div>
+
+  <!-- validated generation logic, unchanged (see test-logic.js) -->
+  <script src="catan-logic.js"></script>
+  <script>
+  "use strict";
+  const { RESOURCES, HARBOR_RES, isRed, pips, generate, R, W } = Catan;
+
+  // logic resource key -> design-system resource name
+  const DS = { forest:"forest", pasture:"pasture", field:"fields", hill:"hills", mountain:"mountain", desert:"desert" };
+  const LABEL = { forest:"Forest", pasture:"Pasture", field:"Fields", hill:"Hills", mountain:"Mountains", desert:"Desert" };
+  const ORDER = ["forest","pasture","field","hill","mountain","desert"];
+
+  // pointy-top tile geometry — matches the real 5–6 board (no rotation).
+  // Logic coords are already pointy-top rows 3-4-5-6-5-4-3, so use them directly.
+  const HW = W, HT = 2 * R;                 // hex tile width (√3·R) and height (2R)
+  const ROWSTEP = 1.5 * R, HALF = W / 2;    // row step, half-column offset
+  // six pointy-top neighbour vectors (all length W)
+  const NEI = [[HW, 0], [-HW, 0], [HALF, ROWSTEP], [HALF, -ROWSTEP], [-HALF, ROWSTEP], [-HALF, -ROWSTEP]];
+  const qkey = (x, y) => `${Math.round(x / 6)},${Math.round(y / 6)}`;
+
+  let config = { mode: "extension", ocean: true, mixPorts: true };
+  let model = null;
+
+  function buildBoardDOM() {
+    const { geo, resources, numbers, harbours, robberHex } = model;
+
+    // ---- land cells (pointy-top, straight from the logic lattice) ----
+    const land = geo.hexes.map(h =>
+      ({ id: h.id, x: h.cx, y: h.cy, res: resources[h.id], num: numbers[h.id] }));
+    const landSet = new Set(land.map(c => qkey(c.x, c.y)));
+
+    // ---- one ocean ring hugging the coast ----
+    const ocean = [];
+    if (config.ocean) {
+      const seen = new Set();
+      for (const c of land) {
+        for (const [dx, dy] of NEI) {
+          const nx = c.x + dx, ny = c.y + dy, k = qkey(nx, ny);
+          if (landSet.has(k) || seen.has(k)) continue;
+          seen.add(k);
+          // outward normal = away from adjacent land (for the dock direction)
+          let lx = 0, ly = 0, n = 0;
+          for (const [ex, ey] of NEI)
+            if (landSet.has(qkey(nx + ex, ny + ey))) { lx += ex; ly += ey; n++; }
+          ocean.push({ x: nx, y: ny, tx: n ? lx / n : 0, ty: n ? ly / n : 0 });
+        }
+      }
+    }
+
+    // ---- bounds + fit ----
+    const all = [...land, ...ocean];
+    const xs = all.map(c => c.x), ys = all.map(c => c.y);
+    const minX = Math.min(...xs) - HW / 2, maxX = Math.max(...xs) + HW / 2;
+    const minY = Math.min(...ys) - HT / 2, maxY = Math.max(...ys) + HT / 2;
+    const pad = config.ocean ? HW * 0.1 : HW * 0.06;
+    const boardW = (maxX - minX) + pad * 2, boardH = (maxY - minY) + pad * 2;
+    const ox = -minX + pad, oy = -minY + pad;
+
+    const wrap = document.getElementById("boardwrap");
+    wrap.style.width = boardW + "px";
+    wrap.style.height = boardH + "px";
+
+    const hexHTML = (res, x, y, z) => `
+      <div class="hex res-${DS[res] || res}" style="left:${(x - HW/2).toFixed(1)}px;top:${(y - HT/2).toFixed(1)}px;width:${HW.toFixed(1)}px;height:${HT.toFixed(1)}px;z-index:${z}">
+        <span class="hex__edge"></span>
+        <span class="hex__face">${motif(res)}<span class="hex__sheen"></span><span class="hex__rim"></span></span>`;
+
+    let html = "";
+    // ocean frame
+    for (const c of ocean) html += hexHTML("ocean", c.x + ox, c.y + oy, 1) + `</div>`;
+    // land + tokens + robber
+    for (const c of land) {
+      html += hexHTML(c.res, c.x + ox, c.y + oy, 2);
+      if (c.num != null && c.res !== "desert") html += token(c.num);
+      if (c.id === robberHex) html += robberSVG();
+      html += `</div>`;
+    }
+
+    // ---- ports on the ocean ring, in the logic's angular order ----
+    if (config.ocean && ocean.length) {
+      const cX = (minX + maxX) / 2, cY = (minY + maxY) / 2;
+      const ring = ocean.map(o => ({ ...o, ang: Math.atan2(o.y - cY, o.x - cX) }))
+                        .sort((a, b) => a.ang - b.ang);
+      // harbours already chosen + spaced by the logic; keep that order by edge angle
+      const hbs = harbours.map(h => {
+        const m = h.edge.mid;
+        return { type: h.type, ang: Math.atan2(m.y - cY, m.x - cX) };
+      }).sort((a, b) => a.ang - b.ang);
+      const step = ring.length / hbs.length;
+      hbs.forEach((hb, i) => {
+        const cell = ring[Math.floor(i * step) % ring.length];
+        const len = Math.hypot(cell.tx, cell.ty) || 1;
+        const dx = -cell.tx / len, dy = -cell.ty / len;           // out to sea
+        const px = cell.x + ox + dx * HW * 0.14, py = cell.y + oy + dy * HT * 0.14;
+        const generic = hb.type === "3:1";
+        const ratio = generic ? "3:1" : "2:1";
+        const dot = generic ? "" :
+          `<span class="pill__dot" style="background:var(--res-${DS[HARBOR_RES[hb.type]]}-top)"></span>`;
+        html += `
+          <div class="port" style="left:${px.toFixed(1)}px;top:${py.toFixed(1)}px;font-size:${Math.max(9, HW*0.1).toFixed(1)}px">
+            <span class="port__dock" style="width:${(HW*0.5).toFixed(0)}px;transform:translate(-50%,-50%) rotate(${Math.atan2(-dy,-dx)}rad)"></span>
+            <span class="pill">${ratio}${dot}</span>
+          </div>`;
+      });
+    }
+
+    wrap.innerHTML = `<div class="boardinner">${html}</div>`;
+    fitBoard(boardW, boardH);
+  }
+
+  function fitBoard(boardW, boardH) {
+    const stage = document.getElementById("stage");
+    const wrap = document.getElementById("boardwrap");
+    const k = Math.min(stage.clientWidth / boardW, stage.clientHeight / boardH) * 0.99;
+    const tx = (stage.clientWidth - boardW * k) / 2;
+    const ty = (stage.clientHeight - boardH * k) / 2;
+    wrap.style.transform = `translate(${tx.toFixed(1)}px, ${ty.toFixed(1)}px) scale(${k})`;
+    wrap._dims = { boardW, boardH };
+  }
+
+  function token(n) {
+    const size = HW * 0.46, red = isRed(n);
+    const num = (size * (n >= 10 ? 0.46 : 0.52)).toFixed(1);
+    const dotR = size * 0.026, gap = size * 0.085 - dotR * 2;
+    const color = red ? "var(--token-red)" : "var(--token-ink)";
+    let dots = "";
+    for (let i = 0; i < pips(n); i++)
+      dots += `<i style="width:${(dotR*2).toFixed(1)}px;height:${(dotR*2).toFixed(1)}px;background:${color}"></i>`;
+    return `<div class="token" style="width:${size.toFixed(1)}px;height:${size.toFixed(1)}px">
+        <span class="token__num" style="color:${color};font-size:${num}px;font-weight:${red?700:600}">${n}</span>
+        <span class="token__pips" style="gap:${Math.max(0,gap).toFixed(1)}px;margin-top:${(size*0.01).toFixed(1)}px">${dots}</span>
+      </div>`;
+  }
+
+  function robberSVG() {
+    const w = HW * 0.4;
+    return `<svg class="robber" viewBox="0 0 40 56" style="width:${w.toFixed(1)}px">
+      <path d="M20 2c-6 0-9 5-7 11 -5 3 -8 9 -8 18 0 8 4 14 4 20 0 2 14 2 14 0 0-6 4-12 4-20 0-9-3-15-8-18 2-6-1-11-3-11z" fill="#2B2622"/>
+      <ellipse cx="20" cy="50" rx="13" ry="4" fill="#1C150E"/>
+    </svg>`;
+  }
+
+  // lightweight resource motifs (subtle, on-system colors)
+  function motif(res) {
+    const d = "var(--res-" + (DS[res] || res) + "-deep)";
+    const t = "var(--res-" + (DS[res] || res) + "-top)";
+    const ink = "var(--res-" + (DS[res] || res) + "-ink)";
+    const V = `viewBox="0 0 100 87" preserveAspectRatio="xMidYMid slice"`;
+    const wrap = (inner) => `<svg class="hex__art" ${V} aria-hidden="true" style="opacity:.55">${inner}</svg>`;
+    switch (res) {
+      case "forest": return wrap(
+        `<g fill="${d}"><path d="M30 60 L40 38 L50 60Z"/><path d="M33 50 L40 30 L47 50Z"/>
+         <path d="M55 64 L66 40 L77 64Z"/><path d="M58 53 L66 32 L74 53Z"/></g>
+         <rect x="38" y="58" width="4" height="9" fill="${ink}"/><rect x="64" y="62" width="4" height="9" fill="${ink}"/>`);
+      case "pasture": return wrap(
+        `<g fill="#F4F1E8"><ellipse cx="42" cy="52" rx="13" ry="9"/><circle cx="32" cy="48" r="5" fill="${ink}"/></g>
+         <g fill="#EFEDE2"><ellipse cx="68" cy="60" rx="9" ry="6"/><circle cx="61" cy="57" r="3.5" fill="${ink}"/></g>`);
+      case "field": return wrap(
+        `<g stroke="${ink}" stroke-width="2.4" opacity=".85">
+          <path d="M28 70 L34 24"/><path d="M44 72 L50 26"/><path d="M60 70 L66 24"/><path d="M76 72 L80 30"/></g>
+         <g fill="${ink}"><circle cx="34" cy="24" r="3"/><circle cx="50" cy="26" r="3"/><circle cx="66" cy="24" r="3"/></g>`);
+      case "hill": return wrap(
+        `<g fill="${d}" stroke="${ink}" stroke-width="1.5">
+          <rect x="30" y="46" width="18" height="9" rx="1.5"/><rect x="52" y="46" width="18" height="9" rx="1.5"/>
+          <rect x="41" y="57" width="18" height="9" rx="1.5"/></g>`);
+      case "mountain": return wrap(
+        `<g fill="${d}"><path d="M22 66 L44 30 L66 66Z"/><path d="M50 66 L70 38 L88 66Z"/></g>
+         <g fill="#EFF3F6"><path d="M44 30 L38 40 L50 40Z"/><path d="M70 38 L65 46 L76 46Z"/></g>`);
+      case "desert": return wrap(
+        `<g fill="none" stroke="${ink}" stroke-width="2.5" opacity=".6" stroke-linecap="round">
+          <path d="M22 56 q14 -10 28 0 t28 0"/><path d="M26 66 q12 -8 24 0 t24 0"/></g>
+         <circle cx="66" cy="30" r="7" fill="#F6E6B8" opacity=".8"/>`);
+      default: return "";
+    }
+  }
+
+  function renderLegend() {
+    const counts = {};
+    for (const h of model.geo.hexes) counts[model.resources[h.id]] = (counts[model.resources[h.id]] || 0) + 1;
+    document.getElementById("legend").innerHTML = ORDER.filter(r => counts[r]).map(r =>
+      `<span class="legend__item"><span class="legend__sw" style="background:var(--res-${DS[r]}-top)"></span>${LABEL[r]} <b>×${counts[r]}</b></span>`
+    ).join("");
+  }
+
+  function run(seed) {
+    model = generate(seed, config.mode, { mixPorts: config.mixPorts });
+    document.getElementById("stage").dataset.sea = config.ocean ? "1" : "0";
+    buildBoardDOM();   // recreates .boardinner → entrance animation replays
+    renderLegend();
+    syncControls();
+    document.getElementById("seed").textContent = "#" + String(model.seed).slice(-5);
+    const url = new URL(location.href);
+    url.searchParams.set("seed", model.seed);
+    url.searchParams.set("mode", model.mode);
+    url.searchParams.set("mix", config.mixPorts ? "1" : "0");
+    history.replaceState(null, "", url);
+  }
+
+  /* ---- expansion selection ---- */
+  function syncControls() {
+    document.querySelectorAll("#seg button").forEach(b =>
+      b.classList.toggle("active", b.dataset.mode === config.mode));
+    $("badge").textContent = config.mode === "base" ? "3–4 players" : "5–6 players";
+    $("oceanSwitch").classList.toggle("on", config.ocean);
+    $("oceanSwitch").setAttribute("aria-checked", String(config.ocean));
+    $("mixSwitch").classList.toggle("on", config.mixPorts);
+    $("mixSwitch").setAttribute("aria-checked", String(config.mixPorts));
+    $("mixRow").style.opacity = config.ocean ? "1" : ".45";   // ports only show with the ocean frame
+  }
+
+  function applyConfig(patch) {
+    const prevMode = config.mode;
+    Object.assign(config, patch);
+    syncControls();
+    if (config.mode !== prevMode) run(model ? model.seed : null); // structure changed → regenerate
+  }
+
+  /* ---- wiring ---- */
+  const $ = id => document.getElementById(id);
+  $("reroll").onclick = () => run(null);
+  $("sheetGen").onclick = () => { closeSheet(); run(null); };
+
+  function openSheet() { $("sheet").classList.add("open"); $("scrim").classList.add("open"); }
+  function closeSheet() { $("sheet").classList.remove("open"); $("scrim").classList.remove("open"); }
+  $("opts").onclick = openSheet;
+  $("scrim").onclick = closeSheet;
+
+  // board mode
+  document.querySelectorAll("#seg button").forEach(b =>
+    b.onclick = () => applyConfig({ mode: b.dataset.mode }));
+
+  // ocean frame is purely visual — toggle without regenerating
+  $("oceanSwitch").onclick = () => {
+    config.ocean = !config.ocean;
+    syncControls();
+    $("stage").dataset.sea = config.ocean ? "1" : "0";
+    buildBoardDOM();
+  };
+
+  // port mixing changes harbour types — regenerate on the same seed (board stays, ports change)
+  $("mixSwitch").onclick = () => {
+    config.mixPorts = !config.mixPorts;
+    syncControls();
+    run(model ? model.seed : null);
+  };
+
+  $("share").onclick = async () => {
+    try { await navigator.clipboard.writeText(location.href); } catch (_) {}
+    $("shareLabel").textContent = "Link copied!";
+    setTimeout(() => $("shareLabel").textContent = "Copy link to this board", 1600);
+  };
+
+  // refit on viewport changes (rotation / resize)
+  let rt;
+  new ResizeObserver(() => {
+    clearTimeout(rt);
+    rt = setTimeout(() => { const d = document.getElementById("boardwrap")._dims; if (d) fitBoard(d.boardW, d.boardH); }, 60);
+  }).observe(document.getElementById("stage"));
+
+  const params = new URLSearchParams(location.search);
+  if (params.get("mode") === "base") config.mode = "base";
+  if (params.get("mix") === "0") config.mixPorts = false;
+  const urlSeed = parseInt(params.get("seed"), 10);
+  run(Number.isNaN(urlSeed) ? null : urlSeed);
+  </script>
+</body>
+</html>
