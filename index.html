@@ -424,7 +424,7 @@ h1,h2 { font-family:var(--font-display); color:var(--text-strong); margin:0; lin
   function token(n) {
     const size = HW * 0.46, red = isRed(n);
     const num = (size * (n >= 10 ? 0.46 : 0.52)).toFixed(1);
-    const dotR = size * 0.026, gap = size * 0.085 - dotR * 2;
+    const dotR = size * 0.04, gap = size * 0.045;
     const color = red ? "var(--token-red)" : "var(--token-ink)";
     let dots = "";
     for (let i = 0; i < pips(n); i++)
